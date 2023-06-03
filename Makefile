@@ -34,8 +34,8 @@ endif
 #
 
 # keep standard at C11 and C++11
-CFLAGS   = -I.              -O3 -std=c11   -fPIC
-CXXFLAGS = -I. -I./examples -O3 -std=c++11 -fPIC
+CFLAGS   = -I.              -O4  -ffast-math -std=c11   -fPIC
+CXXFLAGS = -I. -I./examples -O4  -ffast-math -std=c++11 -fPIC
 LDFLAGS  =
 
 ifndef LLAMA_DEBUG
@@ -96,11 +96,13 @@ ifeq ($(UNAME_M),$(filter $(UNAME_M),x86_64 i686))
 	#CXXFLAGS += -mfma -mf16c -mavx
 endif
 ifeq ($(UNAME_M),e2k)
-        CFLAGS   += -ffast-math -mno-f16c -mfma -msse3 -mssse3 -mavx -mavx2
-        CXXFLAGS += -ffast-math -mno-f16c -mfma -msse3 -mssse3 -mavx -mavx2
+ggml_e2k.o: ggml_e2k.c ggml.h
+	$(CC)  $(CFLAGS)   -c $< -o $@
+
+OBJS += ggml_e2k.o
+CFLAGS   += -ffast-math -mno-f16c -Wno-pointer-qual
+CXXFLAGS += -ffast-math -mno-f16c -Wno-pointer-qual
 endif
-
-
 ifneq ($(filter ppc64%,$(UNAME_M)),)
 	POWER9_M := $(shell grep "POWER9" /proc/cpuinfo)
 	ifneq (,$(findstring POWER9,$(POWER9_M)))
@@ -121,12 +123,14 @@ ifndef LLAMA_NO_ACCELERATE
 	endif
 endif
 ifdef LLAMA_OPENBLAS
-	CFLAGS  += -DGGML_USE_OPENBLAS -I/usr/local/include/openblas -I/usr/include/openblas
-	ifneq ($(shell grep -e "Arch Linux" -e "ID_LIKE=arch" /etc/os-release 2>/dev/null),)
-		LDFLAGS += -lopenblas -lcblas
-	else
-		LDFLAGS += -lopenblas
-	endif
+	CFLAGS += -DGGML_USE_OPENBLAS -I/usr/include/eml
+	LDFLAGS += -leml
+	#CFLAGS  += -DGGML_USE_OPENBLAS -I/usr/local/include/openblas -I/usr/include/openblas
+	#ifneq ($(shell grep -e "Arch Linux" -e "ID_LIKE=arch" /etc/os-release 2>/dev/null),)
+	#	LDFLAGS += -lopenblas -lcblas
+#	else
+	#	LDFLAGS += -lopenblas
+	#endif
 endif
 ifdef LLAMA_CUBLAS
 	CFLAGS    += -DGGML_USE_CUBLAS -I/usr/local/cuda/include -I/opt/cuda/include -I$(CUDA_PATH)/targets/x86_64-linux/include
